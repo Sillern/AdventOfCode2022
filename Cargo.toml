@@ -18,10 +18,10 @@ criterion = "0.3"
 name = "day01"
 path = "day01/day01.rs"
 
-# [[bin]]
-# name = "day02"
-# path = "day02/day02.rs"
-# 
+[[bin]]
+name = "day02"
+path = "day02/day02.rs"
+
 # [[bin]]
 # name = "day03"
 # path = "day03/day03.rs"
