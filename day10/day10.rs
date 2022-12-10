@@ -87,6 +87,29 @@ fn solve_part2(inputfile: String) -> usize {
     let contents =
         std::fs::read_to_string(inputfile).expect("Something went wrong reading the file");
 
+    let mut cpu = CPU::new(contents, 1);
+    let mut pixels: Vec<char> = Vec::new();
+    let width = 40;
+    let height = 6;
+    for tick in 0..(width * height) {
+        cpu.tick();
+        let xpos = cpu.value();
+        let pixel_pos = tick % width;
+        let sprite = [xpos - 1, xpos, xpos + 1];
+
+        pixels.push(if sprite.contains(&pixel_pos) {
+            '#'
+        } else {
+            '.'
+        });
+    }
+
+    pixels.iter().enumerate().for_each(|(index, value)| {
+        print!("{}", value);
+        if (index + 1) % width as usize == 0 {
+            println!();
+        }
+    });
     0
 }
 
