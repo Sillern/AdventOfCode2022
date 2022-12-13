@@ -1,11 +1,12 @@
 use itertools::EitherOrBoth::{Both, Left, Right};
 use itertools::Itertools;
+use std::cmp::Ordering;
 use std::env;
 
 #[derive(Debug)]
-struct ParsedToken {
-    value: Option<usize>,
-    list: Vec<ParsedToken>,
+pub struct ParsedToken {
+    pub value: Option<usize>,
+    pub list: Vec<ParsedToken>,
 }
 
 fn parse(parsed_tokens: &mut Vec<ParsedToken>, packet: &str) -> usize {
@@ -62,20 +63,20 @@ fn parse(parsed_tokens: &mut Vec<ParsedToken>, packet: &str) -> usize {
     offset
 }
 
-fn compare(lhs: &ParsedToken, rhs: &ParsedToken) -> i32 {
+fn compare(lhs: &ParsedToken, rhs: &ParsedToken) -> Ordering {
     if lhs.value.is_none() && rhs.value.is_none() {
         // both are list
         lhs.list
             .iter()
             .zip_longest(rhs.list.iter())
-            .fold(0, |acc, items| {
-                if acc != 0 {
+            .fold(Ordering::Equal, |acc, items| {
+                if acc != Ordering::Equal {
                     return acc;
                 }
                 match items {
                     Both(lhs_item, rhs_item) => compare(lhs_item, rhs_item),
-                    Right(_) => -1,
-                    Left(_) => 1,
+                    Right(_) => Ordering::Less,
+                    Left(_) => Ordering::Greater,
                 }
             })
     } else if rhs.value.is_none() {
@@ -96,11 +97,11 @@ fn compare(lhs: &ParsedToken, rhs: &ParsedToken) -> i32 {
         // both have value
 
         if lhs.value.unwrap() == rhs.value.unwrap() {
-            0
+            Ordering::Equal
         } else if lhs.value.unwrap() < rhs.value.unwrap() {
-            -1
+            Ordering::Less
         } else {
-            1
+            Ordering::Greater
         }
     }
 }
@@ -122,9 +123,9 @@ fn solve_part1(inputfile: String) -> usize {
             parse(&mut rhs_parsed, rhs);
 
             match compare(&lhs_parsed.first().unwrap(), &rhs_parsed.first().unwrap()) {
-                -1 => Some(pair_index + 1),
-                1 => None,
-                _ => panic!(),
+                Ordering::Less => Some(pair_index + 1),
+                Ordering::Greater => None,
+                Ordering::Equal => panic!(),
             }
         })
         .sum()
@@ -134,7 +135,34 @@ fn solve_part2(inputfile: String) -> usize {
     let contents =
         std::fs::read_to_string(inputfile).expect("Something went wrong reading the file");
 
-    0
+    let mut divider_packets: Vec<ParsedToken> = Vec::new();
+    for packet in ["[[2]]", "[[6]]"] {
+        if packet != "\n" {
+            parse(&mut divider_packets, packet);
+        }
+    }
+
+    let mut packets: Vec<ParsedToken> = Vec::new();
+    contents.lines().for_each(|packet| {
+        if packet != "\n" {
+            parse(&mut packets, packet);
+        }
+    });
+
+    packets.sort_by(|a, b| compare(a, b));
+    packets
+        .iter()
+        .enumerate()
+        .filter_map(|(index, packet)| {
+            divider_packets.iter().find_map(|divider_packet| {
+                match compare(&packet, &divider_packet) {
+                    Ordering::Less => None,
+                    Ordering::Greater => None,
+                    Ordering::Equal => Some(index + 1),
+                }
+            })
+        })
+        .product()
 }
 
 fn main() {
