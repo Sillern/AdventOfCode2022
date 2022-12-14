@@ -41,7 +41,7 @@ fn draw_map(map: &CavityMap, sand_drop: Coordinate, frame: u32) {
         start_height.max(1 + y_range as i32),
     );
 
-    let scale = 2;
+    let scale = 4;
     let border = 2;
     let real_size = (
         scale * (border * 2 + dimensions.0 as u32),
@@ -120,10 +120,7 @@ fn parse(contents: &String) -> CavityMap {
     cavity_map
 }
 
-fn drop_sand(map: &mut CavityMap, start_drop: Coordinate, frame: &mut u32) -> bool {
-    //
-    let y_max = map.iter().map(|(pos, _)| pos.1).max().unwrap_or(0);
-
+fn drop_sand(map: &CavityMap, start_drop: Coordinate, y_max: i32, frame: &mut u32) -> Coordinate {
     let mut sand = start_drop;
     while sand.1 < y_max {
         let below = (sand.0, sand.1 + 1);
@@ -136,8 +133,7 @@ fn drop_sand(map: &mut CavityMap, start_drop: Coordinate, frame: &mut u32) -> bo
                 // blocked
                 if let Some(right_id) = map.get(&diagonal_right) {
                     // blocked
-                    map.insert(sand, 10);
-                    return true;
+                    return sand;
                 } else {
                     sand = diagonal_right;
                 }
@@ -157,7 +153,7 @@ fn drop_sand(map: &mut CavityMap, start_drop: Coordinate, frame: &mut u32) -> bo
             *frame += 1;
         }
     }
-    false
+    return sand;
 }
 
 fn solve_part1(inputfile: String) -> usize {
@@ -165,13 +161,21 @@ fn solve_part1(inputfile: String) -> usize {
         std::fs::read_to_string(inputfile).expect("Something went wrong reading the file");
 
     let mut cavity_map = parse(&contents);
-    let sand_drop: Coordinate = (500, 0);
-    let mut frame = 0;
-    draw_map(&cavity_map, sand_drop, frame);
-    // enable drawing by incrementing frame to nonzero
-    frame += 1;
+    let start_drop: Coordinate = (500, 0);
 
-    while drop_sand(&mut cavity_map, sand_drop, &mut frame) {}
+    // enable drawing by setting frame to 1
+    let mut frame = 0;
+
+    let y_max = cavity_map.iter().map(|(pos, _)| pos.1).max().unwrap_or(0);
+
+    loop {
+        let sand = drop_sand(&mut cavity_map, start_drop, y_max, &mut frame);
+        if sand.1 < y_max {
+            cavity_map.insert(sand, 10);
+        } else {
+            break;
+        }
+    }
 
     cavity_map.values().filter(|&id| *id == 10).count()
 }
@@ -180,7 +184,25 @@ fn solve_part2(inputfile: String) -> usize {
     let contents =
         std::fs::read_to_string(inputfile).expect("Something went wrong reading the file");
 
-    0
+    let mut cavity_map = parse(&contents);
+    let start_drop: Coordinate = (500, 0);
+    // enable drawing by setting frame to 1
+    let mut frame = 0;
+
+    let y_max = 1 + cavity_map.iter().map(|(pos, _)| pos.1).max().unwrap_or(0);
+    while !cavity_map.contains_key(&start_drop) {
+        let sand = drop_sand(&mut cavity_map, start_drop, y_max, &mut frame);
+
+        if sand.1 <= y_max {
+            // came to rest on boulders/sand
+            cavity_map.insert(sand, 10);
+        } else {
+            // On the floor
+            cavity_map.insert(sand, 10);
+        }
+    }
+
+    cavity_map.values().filter(|&id| *id == 10).count()
 }
 
 fn main() {
